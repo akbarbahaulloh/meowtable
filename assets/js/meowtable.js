@@ -1,53 +1,126 @@
 jQuery(document).ready(function($) {
-    /**
-     * Frontend Combined Filtering Logic for Meowtable
-     * Supports: Keyword Search, Category Dropdown, and Tag Dropdown
-     */
-    function filterMeowtable($container) {
-        var query = $container.find('.meowtable-search').val() || '';
-        query = query.toLowerCase();
+    var searchTimer;
 
-        var selectedCat = $container.find('.meowtable-filter-cat').val() || '';
-        var selectedTag = $container.find('.meowtable-filter-tag').val() || '';
+    function renderPagination($container, totalPages, currentPage) {
+        var $pager = $container.find('.meowtable-pagination');
+        $pager.empty();
 
-        var $rows = $container.find('tbody tr').not('.meowtable-no-data');
+        if (totalPages <= 1) return;
 
-        $rows.each(function() {
-            var $row = $(this);
-            var rowText = $row.text().toLowerCase();
-            var rowCats = ($row.data('categories') || '').toString().split(',');
-            var rowTags = ($row.data('tags') || '').toString().split(',');
+        var html = '<ul class="meowtable-pagination-list">';
+        
+        // Prev
+        html += '<li><button class="meowtable-page-btn" data-page="' + (currentPage - 1) + '" ' + (currentPage === 1 ? 'disabled' : '') + '>&laquo;</button></li>';
 
-            var matchSearch = rowText.indexOf(query) > -1;
-            var matchCat = selectedCat === '' || rowCats.includes(selectedCat);
-            var matchTag = selectedTag === '' || rowTags.includes(selectedTag);
+        // Pages
+        for (var i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                html += '<li><button class="meowtable-page-btn ' + (i === currentPage ? 'active' : '') + '" data-page="' + i + '">' + i + '</button></li>';
+            } else if (i === currentPage - 3 || i === currentPage + 3) {
+                html += '<li class="meowtable-pagination-dots">...</li>';
+            }
+        }
 
-            if (matchSearch && matchCat && matchTag) {
-                $row.show();
-            } else {
-                $row.hide();
+        // Next
+        html += '<li><button class="meowtable-page-btn" data-page="' + (currentPage + 1) + '" ' + (currentPage === totalPages ? 'disabled' : '') + '>&raquo;</button></li>';
+        html += '</ul>';
+
+        $pager.html(html);
+    }
+
+    function fetchTableData($container, page) {
+        var tableId = $container.data('table_id');
+        var search = $container.find('.meowtable-search').val() || '';
+        var cat = $container.find('.meowtable-filter-cat').val() || '';
+        var tag = $container.find('.meowtable-filter-tag').val() || '';
+
+        $container.addClass('meowtable-loading');
+        $container.find('.meowtable-loader').show();
+
+        $.post(meowtable_ajax.ajax_url, {
+            action: 'meowtable_get_data',
+            nonce: meowtable_ajax.nonce,
+            table_id: tableId,
+            paged: page,
+            search: search,
+            cat: cat,
+            tag: tag
+        }, function(res) {
+            $container.removeClass('meowtable-loading');
+            $container.find('.meowtable-loader').hide();
+
+            if (res.success) {
+                $container.find('.meowtable-body').html(res.data.html);
+                renderPagination($container, res.data.total_pages, res.data.current_page);
+                $container.find('.meowtable-pagination').attr('data-total_pages', res.data.total_pages);
             }
         });
+    }
 
-        // Handle 'No data found' row
-        var visibleRows = $rows.filter(':visible').length;
-        var $noDataRow = $container.find('.meowtable-no-data');
-
-        if (visibleRows === 0) {
-            if ($noDataRow.length === 0) {
-                var colCount = $container.find('thead th').length;
-                $container.find('tbody').append('<tr class="meowtable-no-data"><td colspan="' + colCount + '">No matching records found.</td></tr>');
-            } else {
-                $noDataRow.show();
-            }
+    function filterMeowtable($container) {
+        var isLazy = $container.data('lazy') == '1';
+        
+        if (isLazy) {
+            // Re-fetch from server starting at page 1
+            fetchTableData($container, 1);
         } else {
-            $noDataRow.hide();
+            // Client-side filtering (Legacy)
+            var query = $container.find('.meowtable-search').val() || '';
+            query = query.toLowerCase();
+            var selectedCat = $container.find('.meowtable-filter-cat').val() || '';
+            var selectedTag = $container.find('.meowtable-filter-tag').val() || '';
+
+            var $rows = $container.find('tbody tr').not('.meowtable-no-data');
+
+            $rows.each(function() {
+                var $row = $(this);
+                var rowText = $row.text().toLowerCase();
+                var rowCats = ($row.data('categories') || '').toString().split(',');
+                var rowTags = ($row.data('tags') || '').toString().split(',');
+
+                var matchSearch = rowText.indexOf(query) > -1;
+                var matchCat = selectedCat === '' || rowCats.includes(selectedCat);
+                var matchTag = selectedTag === '' || rowTags.includes(selectedTag);
+
+                if (matchSearch && matchCat && matchTag) {
+                    $row.show();
+                } else {
+                    $row.hide();
+                }
+            });
         }
     }
 
+    // Initial Pagination Rendering
+    $('.meowtable-container').each(function() {
+        var $con = $(this);
+        if ($con.data('lazy') == '1') {
+            var total = $con.find('.meowtable-pagination').data('total_pages');
+            renderPagination($con, total, 1);
+        }
+    });
+
+    // Pagination Click
+    $(document).on('click', '.meowtable-page-btn', function(e) {
+        e.preventDefault();
+        var page = $(this).data('page');
+        var $container = $(this).closest('.meowtable-container');
+        if (page > 0) {
+            fetchTableData($container, page);
+            // Scroll to top of table
+            $('html, body').animate({
+                scrollTop: $container.offset().top - 100
+            }, 300);
+        }
+    });
+
     // Keyword Search Event
     $(document).on('keyup', '.meowtable-search', function() {
-        filterMeowtable($(this).closest('.meowtable-container'));
+        var $container = $(this).closest('.meowtable-container');
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function() {
+            filterMeowtable($container);
+        }, 400); 
     });
 
     // Dropdown Filter Events

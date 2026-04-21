@@ -18,6 +18,8 @@ $defaults = [
     'post_types' => ['post'],
     'categories' => '',
     'tags' => '',
+    'items_per_page' => 10,
+    'enable_lazy_load' => true,
     'enable_search' => true,
     'enable_cat_filter' => false,
     'enable_tag_filter' => false
@@ -95,7 +97,14 @@ $post_types = get_post_types(['public' => true], 'objects');
                 <td>
                     <label><input type="checkbox" id="enable_search" <?php checked($settings['enable_search'], true); ?>> Enable Search Bar</label><br>
                     <label><input type="checkbox" id="enable_cat_filter" <?php checked($settings['enable_cat_filter'], true); ?>> Enable Category Filter</label><br>
-                    <label><input type="checkbox" id="enable_tag_filter" <?php checked($settings['enable_tag_filter'], true); ?>> Enable Tag Filter</label>
+                    <label><input type="checkbox" id="enable_tag_filter" <?php checked($settings['enable_tag_filter'], true); ?>> Enable Tag Filter</label><br>
+                    <label><input type="checkbox" id="enable_lazy_load" <?php checked($settings['enable_lazy_load'], true); ?>> Enable AJAX Lazy Load (Recommended)</label>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="items_per_page">Items per Page</label></th>
+                <td>
+                    <input type="number" id="items_per_page" class="small-text" value="<?php echo esc_attr($settings['items_per_page']); ?>" min="1" max="100">
                 </td>
             </tr>
         </table>
@@ -180,6 +189,8 @@ $post_types = get_post_types(['public' => true], 'objects');
                 post_types: $('#post_types').val() || ['post'],
                 categories: cats,
                 tags: $('#tags').val(),
+                items_per_page: $('#items_per_page').val(),
+                enable_lazy_load: $('#enable_lazy_load').is(':checked'),
                 enable_search: $('#enable_search').is(':checked'),
                 enable_cat_filter: $('#enable_cat_filter').is(':checked'),
                 enable_tag_filter: $('#enable_tag_filter').is(':checked'),

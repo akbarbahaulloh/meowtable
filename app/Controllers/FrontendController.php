@@ -6,11 +6,18 @@ class FrontendController {
     public static function init() {
         add_shortcode('meowtable', [__CLASS__, 'render_shortcode']);
         add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_frontend_assets']);
+        add_action('wp_ajax_meowtable_get_data', [__CLASS__, 'ajax_get_data']);
+        add_action('wp_ajax_nopriv_meowtable_get_data', [__CLASS__, 'ajax_get_data']);
     }
 
     public static function enqueue_frontend_assets() {
         wp_enqueue_style('meowtable-css', MEOWTABLE_PLUGIN_URL . 'assets/css/meowtable.css', [], MEOWTABLE_VERSION);
         wp_enqueue_script('meowtable-js', MEOWTABLE_PLUGIN_URL . 'assets/js/meowtable.js', ['jquery'], MEOWTABLE_VERSION, true);
+        
+        wp_localize_script('meowtable-js', 'meowtable_ajax', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce'    => wp_create_nonce('meowtable_nonce')
+        ]);
     }
 
     public static function render_shortcode($atts) {
@@ -36,6 +43,8 @@ class FrontendController {
             'post_types' => ['post'],
             'categories' => '',
             'tags' => '',
+            'items_per_page' => 10,
+            'enable_lazy_load' => true,
             'enable_search' => true,
             'enable_cat_filter' => false,
             'enable_tag_filter' => false
@@ -49,8 +58,9 @@ class FrontendController {
         // Prepare Query
         $args = [
             'post_type' => !empty($settings['post_types']) ? $settings['post_types'] : 'post',
-            'posts_per_page' => -1,
-            'post_status' => 'publish'
+            'posts_per_page' => $settings['enable_lazy_load'] ? intval($settings['items_per_page']) : -1,
+            'post_status' => 'publish',
+            'paged' => 1
         ];
 
         // Tax Queries (Categories and Tags)
@@ -92,19 +102,21 @@ class FrontendController {
                 
                 // Collect Categories
                 $cats = get_the_category($post_id);
-                $cat_names = [];
+                $allowed_cats = !empty($settings['categories']) ? (array)$settings['categories'] : [];
                 foreach($cats as $cat) {
-                    $cat_names[] = $cat->name;
-                    $all_categories[$cat->slug] = $cat->name;
+                    if (empty($allowed_cats) || in_array($cat->slug, $allowed_cats)) {
+                        $all_categories[$cat->slug] = $cat->name;
+                    }
                 }
 
                 // Collect Tags
                 $tags = get_the_tags($post_id);
-                $tag_names = [];
                 if ($tags) {
+                    $allowed_tags = !empty($settings['tags']) ? array_map('trim', explode(',', $settings['tags'])) : [];
                     foreach($tags as $tag) {
-                        $tag_names[] = $tag->name;
-                        $all_tags[$tag->slug] = $tag->name;
+                        if (empty($allowed_tags) || in_array($tag->slug, $allowed_tags)) {
+                            $all_tags[$tag->slug] = $tag->name;
+                        }
                     }
                 }
 
@@ -128,7 +140,10 @@ class FrontendController {
 
         ob_start();
         ?>
-        <div class="meowtable-container meowtable-id-<?php echo esc_attr($id); ?>" data-table_id="<?php echo esc_attr($id); ?>">
+        <div class="meowtable-container meowtable-id-<?php echo esc_attr($id); ?>" 
+             data-table_id="<?php echo esc_attr($id); ?>" 
+             data-lazy="<?php echo $settings['enable_lazy_load'] ? '1' : '0'; ?>"
+             data-per_page="<?php echo esc_attr($settings['items_per_page']); ?>">
             <div class="meowtable-header">
                 <div class="meowtable-filters">
                     <?php if (!empty($settings['enable_cat_filter']) && !empty($all_categories)): ?>
@@ -164,7 +179,7 @@ class FrontendController {
                         <?php endforeach; ?>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="meowtable-body">
                     <?php if (!empty($row_data)): foreach ($row_data as $row): ?>
                         <tr data-categories="<?php echo esc_attr($row['post_cats']); ?>" data-tags="<?php echo esc_attr($row['post_tags']); ?>">
                             <?php echo $row['html']; ?>
@@ -176,9 +191,104 @@ class FrontendController {
                     <?php endif; ?>
                 </tbody>
             </table>
+            
+            <?php if ($settings['enable_lazy_load']): ?>
+                <div class="meowtable-footer">
+                    <div class="meowtable-pagination" data-total_pages="<?php echo esc_attr($query->max_num_pages); ?>">
+                        <!-- Pagination will be rendered by JS -->
+                    </div>
+                </div>
+            <?php endif; ?>
+            
+            <div class="meowtable-loader" style="display:none;"></div>
         </div>
         <?php
         return ob_get_clean();
+    }
+
+    public static function ajax_get_data() {
+        check_ajax_referer('meowtable_nonce', 'nonce');
+        
+        $table_id = intval($_POST['table_id']);
+        $page = intval($_POST['paged']);
+        $search = sanitize_text_field($_POST['search']);
+        $cat_filter = sanitize_text_field($_POST['cat']);
+        $tag_filter = sanitize_text_field($_POST['tag']);
+
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'meowtables';
+        $table = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $table_id));
+
+        if (!$table) {
+            wp_send_json_error('Table not found');
+        }
+
+        $settings = json_decode($table->settings, true);
+        
+        $args = [
+            'post_type' => !empty($settings['post_types']) ? $settings['post_types'] : 'post',
+            'posts_per_page' => intval($settings['items_per_page']),
+            'paged' => $page,
+            'post_status' => 'publish',
+            's' => $search
+        ];
+
+        $tax_query = [];
+        // Apply Query Filters (categories/tags set in table config)
+        if (!empty($settings['categories'])) {
+            $cats = $settings['categories'];
+            if (!is_array($cats)) $cats = array_map('trim', explode(',', $cats));
+            $tax_query[] = ['taxonomy' => 'category', 'field' => 'slug', 'terms' => $cats];
+        }
+        if (!empty($settings['tags'])) {
+            $tags = array_map('trim', explode(',', $settings['tags']));
+            $tax_query[] = ['taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $tags];
+        }
+
+        // Apply Frontend Dynamic Filters
+        if (!empty($cat_filter)) {
+            $tax_query[] = ['taxonomy' => 'category', 'field' => 'slug', 'terms' => $cat_filter];
+        }
+        if (!empty($tag_filter)) {
+            $tax_query[] = ['taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $tag_filter];
+        }
+
+        if (count($tax_query) > 1) {
+            $tax_query['relation'] = 'AND';
+        }
+        if (!empty($tax_query)) {
+            $args['tax_query'] = $tax_query;
+        }
+
+        $query = new \WP_Query($args);
+        $html = '';
+
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $post_id = get_the_ID();
+                $cats = get_the_category($post_id);
+                $tags = get_the_tags($post_id);
+                
+                $post_cats = implode(',', array_keys(array_flip(wp_list_pluck($cats, 'slug'))));
+                $post_tags = $tags ? implode(',', array_keys(array_flip(wp_list_pluck($tags, 'slug')))) : '';
+
+                $html .= '<tr data-categories="' . esc_attr($post_cats) . '" data-tags="' . esc_attr($post_tags) . '">';
+                foreach ($settings['columns'] as $col) {
+                    $html .= '<td>' . self::get_post_field_value($col['key'], $col['type']) . '</td>';
+                }
+                $html .= '</tr>';
+            }
+            wp_reset_postdata();
+        } else {
+            $html = '<tr><td colspan="' . count($settings['columns']) . '">No matching data found.</td></tr>';
+        }
+
+        wp_send_json_success([
+            'html' => $html,
+            'total_pages' => $query->max_num_pages,
+            'current_page' => $page
+        ]);
     }
 
     private static function get_post_field_value($key, $type) {
