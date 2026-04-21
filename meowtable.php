@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Meowtable
- * Description: A free, lightweight, customizable proper table builder with WP post integration, inspired by Ninja Tables.
+ * Description: A free, lightweight, customizable proper table builder with WP post integration.
  * Version: 1.0.0
  * Author: Akbar Bahaulloh
  * Text Domain: meowtable

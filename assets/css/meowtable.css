@@ -16,17 +16,42 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.meowtable-filters {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.meowtable-filter-select {
+    padding: 8px 15px;
+    border: 2px solid #edeff5;
+    border-radius: 25px;
+    font-size: 13px;
+    outline: none;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    min-width: 150px;
+}
+
+.meowtable-filter-select:focus {
+    border-color: #6C63FF;
 }
 
 .meowtable-search-wrapper {
     position: relative;
-    max-width: 300px;
+    max-width: 250px;
     width: 100%;
 }
 
 .meowtable-search {
     width: 100%;
-    padding: 10px 15px;
+    padding: 8px 15px;
     border: 2px solid #edeff5;
     border-radius: 25px;
     font-size: 14px;
@@ -44,6 +69,7 @@
     border-collapse: collapse;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color: #333;
+    table-layout: auto;
 }
 
 .meowtable thead {
@@ -77,13 +103,11 @@
 }
 
 .meowtable tbody tr {
-    transition: all 0.2s ease-in-out;
+    transition: background-color 0.2s ease-in-out;
 }
 
 .meowtable tbody tr:hover {
     background-color: #f8f9ff;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(108, 99, 255, 0.05);
 }
 
 .meowtable a {
@@ -105,18 +129,23 @@
 }
 
 .meowtable button, .meowtable .btn {
-    background: #6C63FF;
-    color: #fff;
+    display: inline-block;
+    background: linear-gradient(135deg, #6C63FF 0%, #483DF6 100%);
+    color: #fff !important;
     border: none;
-    padding: 8px 16px;
-    border-radius: 20px;
+    padding: 10px 20px;
+    border-radius: 25px;
     cursor: pointer;
     font-weight: 600;
-    transition: background 0.2s;
+    text-decoration: none !important;
+    white-space: nowrap;
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-size: 13px;
+    box-shadow: 0 4px 10px rgba(108, 99, 255, 0.2);
 }
 
 .meowtable button:hover, .meowtable .btn:hover {
-    background: #483DF6;
-    color: #fff;
-    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(108, 99, 255, 0.3);
+    background: linear-gradient(135deg, #7b73ff 0%, #5a50f7 100%);
 }

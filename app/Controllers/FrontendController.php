@@ -66,13 +66,80 @@ class FrontendController {
 
         $query = new \WP_Query($args);
 
+        $all_categories = [];
+        $all_tags = [];
+        $row_data = [];
+
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $post_id = get_the_ID();
+                
+                // Collect Categories
+                $cats = get_the_category($post_id);
+                $cat_names = [];
+                foreach($cats as $cat) {
+                    $cat_names[] = $cat->name;
+                    $all_categories[$cat->slug] = $cat->name;
+                }
+
+                // Collect Tags
+                $tags = get_the_tags($post_id);
+                $tag_names = [];
+                if ($tags) {
+                    foreach($tags as $tag) {
+                        $tag_names[] = $tag->name;
+                        $all_tags[$tag->slug] = $tag->name;
+                    }
+                }
+
+                $columns_html = '';
+                foreach ($settings['columns'] as $col) {
+                    $columns_html .= '<td>' . self::get_post_field_value($col['key'], $col['type']) . '</td>';
+                }
+
+                $row_data[] = [
+                    'cats' => implode(',', array_keys($all_categories)), // Wait, this is wrong, I need specific post cats
+                    'post_cats' => implode(',', array_keys(array_flip(wp_list_pluck($cats, 'slug')))),
+                    'post_tags' => $tags ? implode(',', array_keys(array_flip(wp_list_pluck($tags, 'slug')))) : '',
+                    'html' => $columns_html
+                ];
+            }
+            wp_reset_postdata();
+        }
+
+        asort($all_categories);
+        asort($all_tags);
+
         ob_start();
         ?>
         <div class="meowtable-container meowtable-id-<?php echo esc_attr($id); ?>" data-table_id="<?php echo esc_attr($id); ?>">
             <div class="meowtable-header">
+                <div class="meowtable-filters">
+                    <?php if (!empty($settings['enable_cat_filter']) && !empty($all_categories)): ?>
+                        <select class="meowtable-filter-select meowtable-filter-cat">
+                            <option value="">All Categories</option>
+                            <?php foreach($all_categories as $slug => $name): ?>
+                                <option value="<?php echo esc_attr($slug); ?>"><?php echo esc_html($name); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php endif; ?>
+
+                    <?php if (!empty($settings['enable_tag_filter']) && !empty($all_tags)): ?>
+                        <select class="meowtable-filter-select meowtable-filter-tag">
+                            <option value="">All Tags</option>
+                            <?php foreach($all_tags as $slug => $name): ?>
+                                <option value="<?php echo esc_attr($slug); ?>"><?php echo esc_html($name); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php endif; ?>
+                </div>
+
+                <?php if (!empty($settings['enable_search'])): ?>
                 <div class="meowtable-search-wrapper">
                     <input type="text" class="meowtable-search" placeholder="Search data...">
                 </div>
+                <?php endif; ?>
             </div>
             <table class="meowtable">
                 <thead>
@@ -83,15 +150,11 @@ class FrontendController {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if ($query->have_posts()): while ($query->have_posts()): $query->the_post(); ?>
-                        <tr>
-                            <?php foreach($settings['columns'] as $col): 
-                                $val = self::get_post_field_value($col['key'], $col['type']);
-                            ?>
-                                <td><?php echo $val; ?></td>
-                            <?php endforeach; ?>
+                    <?php if (!empty($row_data)): foreach ($row_data as $row): ?>
+                        <tr data-categories="<?php echo esc_attr($row['post_cats']); ?>" data-tags="<?php echo esc_attr($row['post_tags']); ?>">
+                            <?php echo $row['html']; ?>
                         </tr>
-                    <?php endwhile; wp_reset_postdata(); else: ?>
+                    <?php endforeach; else: ?>
                         <tr>
                             <td colspan="<?php echo count($settings['columns']); ?>">No matching data found.</td>
                         </tr>

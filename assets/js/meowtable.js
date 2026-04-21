@@ -1,22 +1,35 @@
 jQuery(document).ready(function($) {
     /**
-     * Frontend Search Logic for Meowtable
+     * Frontend Combined Filtering Logic for Meowtable
+     * Supports: Keyword Search, Category Dropdown, and Tag Dropdown
      */
-    $(document).on('keyup', '.meowtable-search', function() {
-        var query = $(this).val().toLowerCase();
-        var $container = $(this).closest('.meowtable-container');
-        var $rows = $container.find('tbody tr');
+    function filterMeowtable($container) {
+        var query = $container.find('.meowtable-search').val() || '';
+        query = query.toLowerCase();
+
+        var selectedCat = $container.find('.meowtable-filter-cat').val() || '';
+        var selectedTag = $container.find('.meowtable-filter-tag').val() || '';
+
+        var $rows = $container.find('tbody tr').not('.meowtable-no-data');
 
         $rows.each(function() {
-            var rowText = $(this).text().toLowerCase();
-            if (rowText.indexOf(query) > -1) {
-                $(this).show();
+            var $row = $(this);
+            var rowText = $row.text().toLowerCase();
+            var rowCats = ($row.data('categories') || '').toString().split(',');
+            var rowTags = ($row.data('tags') || '').toString().split(',');
+
+            var matchSearch = rowText.indexOf(query) > -1;
+            var matchCat = selectedCat === '' || rowCats.includes(selectedCat);
+            var matchTag = selectedTag === '' || rowTags.includes(selectedTag);
+
+            if (matchSearch && matchCat && matchTag) {
+                $row.show();
             } else {
-                $(this).hide();
+                $row.hide();
             }
         });
 
-        // Show 'No data found' if all rows are hidden
+        // Handle 'No data found' row
         var visibleRows = $rows.filter(':visible').length;
         var $noDataRow = $container.find('.meowtable-no-data');
 
@@ -30,10 +43,15 @@ jQuery(document).ready(function($) {
         } else {
             $noDataRow.hide();
         }
+    }
+
+    // Keyword Search Event
+    $(document).on('keyup', '.meowtable-search', function() {
+        filterMeowtable($(this).closest('.meowtable-container'));
     });
 
-    /**
-     * Optional: Multi-value filtering could be added here
-     * by listening to select changes and combining logic.
-     */
+    // Dropdown Filter Events
+    $(document).on('change', '.meowtable-filter-select', function() {
+        filterMeowtable($(this).closest('.meowtable-container'));
+    });
 });
