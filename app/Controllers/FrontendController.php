@@ -10,6 +10,7 @@ class FrontendController {
 
     public static function enqueue_frontend_assets() {
         wp_enqueue_style('meowtable-css', MEOWTABLE_PLUGIN_URL . 'assets/css/meowtable.css', [], MEOWTABLE_VERSION);
+        wp_enqueue_script('meowtable-js', MEOWTABLE_PLUGIN_URL . 'assets/js/meowtable.js', ['jquery'], MEOWTABLE_VERSION, true);
     }
 
     public static function render_shortcode($atts) {
@@ -67,7 +68,12 @@ class FrontendController {
 
         ob_start();
         ?>
-        <div class="meowtable-container meowtable-id-<?php echo esc_attr($id); ?>">
+        <div class="meowtable-container meowtable-id-<?php echo esc_attr($id); ?>" data-table_id="<?php echo esc_attr($id); ?>">
+            <div class="meowtable-header">
+                <div class="meowtable-search-wrapper">
+                    <input type="text" class="meowtable-search" placeholder="Search data...">
+                </div>
+            </div>
             <table class="meowtable">
                 <thead>
                     <tr>
@@ -111,6 +117,8 @@ class FrontendController {
             $html = str_replace('{{post_excerpt}}', get_the_excerpt(), $html);
             $html = str_replace('{{thumbnail}}', get_the_post_thumbnail(null, 'thumbnail'), $html);
             $html = str_replace('{{permalink}}', get_permalink(), $html);
+            $html = str_replace('{{categories}}', get_the_category_list(', '), $html);
+            $html = str_replace('{{tags}}', get_the_tag_list('', ', ', ''), $html);
             $html = str_replace('{{id}}', $post->ID, $html);
             
             $val = do_shortcode($html);
@@ -138,6 +146,12 @@ class FrontendController {
                 case 'permalink':
                     $val = '<a href="'.get_permalink().'">View</a>';
                     break;
+                case 'categories':
+                    $val = get_the_category_list(', ');
+                    break;
+                case 'tags':
+                    $val = get_the_tag_list('', ', ', '');
+                    break;
                 default:
                     // Maybe it's a meta key
                     $meta = get_post_meta($post->ID, $key, true);
@@ -145,8 +159,8 @@ class FrontendController {
                     break;
             }
             $val = esc_html($val); 
-            // If it's thumbnail or permalink we actually want the HTML, so we unescape those specific ones
-            if (in_array($key, ['thumbnail', 'permalink'])) {
+            // If it's thumbnail, permalink, categories, or tags we actually want the HTML, so we unescape those specific ones
+            if (in_array($key, ['thumbnail', 'permalink', 'categories', 'tags'])) {
                 $val = html_entity_decode($val);
             }
         }

@@ -6,6 +6,37 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
     border-radius: 8px;
     background: #fff;
+    border: 1px solid #f1f2f6;
+}
+
+.meowtable-header {
+    padding: 20px;
+    background: #fcfcff;
+    border-bottom: 1px solid #f1f2f6;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.meowtable-search-wrapper {
+    position: relative;
+    max-width: 300px;
+    width: 100%;
+}
+
+.meowtable-search {
+    width: 100%;
+    padding: 10px 15px;
+    border: 2px solid #edeff5;
+    border-radius: 25px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.meowtable-search:focus {
+    border-color: #6C63FF;
+    box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.1);
 }
 
 .meowtable {

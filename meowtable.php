@@ -40,3 +40,7 @@ register_activation_hook(__FILE__, ['Meowtable\Models\Database', 'activate']);
 // Boot the plugin
 \Meowtable\Controllers\AdminController::init();
 \Meowtable\Controllers\FrontendController::init();
+
+// Initialize GitHub Updater
+$updater = new \Meowtable\Controllers\Updater('akbarbahaulloh', 'meowtable', 'main');
+$updater->init();
