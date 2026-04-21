@@ -37,8 +37,14 @@ jQuery(document).ready(function($) {
     function fetchTableData($container, page) {
         var tableId = $container.data('table_id');
         var search = $container.find('.meowtable-search').val() || '';
-        var cat = $container.find('.meowtable-filter-cat').val() || '';
-        var tag = $container.find('.meowtable-filter-tag').val() || '';
+        
+        // Collect Dynamic Taxonomy Filters
+        var taxonomies = {};
+        $container.find('.meowtable-filter-select').each(function() {
+            var tax = $(this).data('taxonomy');
+            var val = $(this).val();
+            if (val) taxonomies[tax] = val;
+        });
 
         $container.addClass('meowtable-loading');
         $container.find('.meowtable-loader').show();
@@ -49,8 +55,7 @@ jQuery(document).ready(function($) {
             table_id: tableId,
             paged: page,
             search: search,
-            cat: cat,
-            tag: tag
+            taxonomies: taxonomies
         }, function(res) {
             $container.removeClass('meowtable-loading');
             $container.find('.meowtable-loader').hide();
@@ -71,28 +76,36 @@ jQuery(document).ready(function($) {
         var isLazy = $container.data('lazy') == '1';
         
         if (isLazy) {
-            // Re-fetch from server starting at page 1
             fetchTableData($container, 1);
         } else {
-            // Client-side filtering (Legacy)
-            var query = $container.find('.meowtable-search').val() || '';
-            query = query.toLowerCase();
-            var selectedCat = $container.find('.meowtable-filter-cat').val() || '';
-            var selectedTag = $container.find('.meowtable-filter-tag').val() || '';
+            // Client-side filtering (Dynamic Support)
+            var query = ($container.find('.meowtable-search').val() || '').toLowerCase();
+            
+            var activeFilters = {};
+            $container.find('.meowtable-filter-select').each(function() {
+                var tax = $(this).data('taxonomy');
+                var val = $(this).val();
+                if (val) activeFilters[tax] = val;
+            });
 
             var $rows = $container.find('tbody tr').not('.meowtable-no-data');
 
             $rows.each(function() {
                 var $row = $(this);
                 var rowText = $row.text().toLowerCase();
-                var rowCats = ($row.data('categories') || '').toString().split(',');
-                var rowTags = ($row.data('tags') || '').toString().split(',');
-
+                
                 var matchSearch = rowText.indexOf(query) > -1;
-                var matchCat = selectedCat === '' || rowCats.includes(selectedCat);
-                var matchTag = selectedTag === '' || rowTags.includes(selectedTag);
+                var matchTax = true;
 
-                if (matchSearch && matchCat && matchTag) {
+                $.each(activeFilters, function(tax, val) {
+                    var rowTerms = ($row.data(tax) || '').toString().split(',');
+                    if (!rowTerms.includes(val)) {
+                        matchTax = false;
+                        return false; // break
+                    }
+                });
+
+                if (matchSearch && matchTax) {
                     $row.show();
                 } else {
                     $row.hide();
@@ -117,7 +130,6 @@ jQuery(document).ready(function($) {
         var $container = $(this).closest('.meowtable-container');
         if (page > 0) {
             fetchTableData($container, page);
-            // Scroll to top of table
             $('html, body').animate({
                 scrollTop: $container.offset().top - 100
             }, 300);

@@ -51,6 +51,27 @@ class FrontendController {
         ];
         $settings = wp_parse_args($settings, $defaults);
 
+        // Migrate legacy settings to new taxonomy structure
+        if (empty($settings['taxonomy_filters'])) {
+            if (!empty($settings['categories'])) {
+                $categories = $settings['categories'];
+                if (!is_array($categories)) $categories = array_map('trim', explode(',', $categories));
+                $settings['taxonomy_filters']['category'] = [
+                    'terms' => $categories,
+                    'enable_frontend' => $settings['enable_cat_filter']
+                ];
+            }
+            if (!empty($settings['tags'])) {
+                $tags = array_map('trim', explode(',', $settings['tags']));
+                if (!empty($tags[0])) {
+                    $settings['taxonomy_filters']['post_tag'] = [
+                        'terms' => $tags,
+                        'enable_frontend' => $settings['enable_tag_filter']
+                    ];
+                }
+            }
+        }
+
         if (empty($settings['columns'])) {
             return '<p>Meowtable: Table is not configured yet.</p>';
         }
@@ -63,73 +84,65 @@ class FrontendController {
             'paged' => 1
         ];
 
-        // Tax Queries (Categories and Tags)
+        // Process Taxonomy Filters
         $tax_query = [];
-        if (!empty($settings['categories'])) {
-            $cats = $settings['categories'];
-            if (!is_array($cats)) {
-                $cats = array_map('trim', explode(',', $cats));
+        $active_filters = [];
+
+        if (!empty($settings['taxonomy_filters'])) {
+            foreach ($settings['taxonomy_filters'] as $tax_slug => $tax_cfg) {
+                if (!empty($tax_cfg['terms'])) {
+                    $tax_query[] = [
+                        'taxonomy' => $tax_slug,
+                        'field'    => 'slug',
+                        'terms'    => (array)$tax_cfg['terms'],
+                    ];
+                }
+
+                if (!empty($tax_cfg['enable_frontend'])) {
+                    $all_terms = [];
+                    if (!empty($tax_cfg['terms'])) {
+                        foreach((array)$tax_cfg['terms'] as $slug) {
+                            $term = get_term_by('slug', $slug, $tax_slug);
+                            if ($term) $all_terms[$slug] = $term->name;
+                        }
+                    } else {
+                        $terms = get_terms(['taxonomy' => $tax_slug, 'hide_empty' => true]);
+                        foreach($terms as $t) $all_terms[$t->slug] = $t->name;
+                    }
+
+                    if (!empty($all_terms)) {
+                        $tax_obj = get_taxonomy($tax_slug);
+                        $active_filters[$tax_slug] = [
+                            'label' => $tax_obj->label,
+                            'terms' => $all_terms
+                        ];
+                    }
+                }
             }
-            $tax_query[] = [
-                'taxonomy' => 'category',
-                'field'    => 'slug',
-                'terms'    => $cats,
-            ];
         }
-        if (!empty($settings['tags'])) {
-            $tags = array_map('trim', explode(',', $settings['tags']));
-            $tax_query[] = [
-                'taxonomy' => 'post_tag',
-                'field'    => 'slug',
-                'terms'    => $tags,
-            ];
+
+        if (count($tax_query) > 1) {
+            $tax_query['relation'] = 'AND';
         }
         if (!empty($tax_query)) {
-            $tax_query['relation'] = 'AND';
             $args['tax_query'] = $tax_query;
         }
 
         $query = new \WP_Query($args);
-
-        $all_categories = [];
-        $all_tags = [];
         $row_data = [];
-
-        // Correctly populate Filter Dropdowns from Settings
-        if (!empty($settings['enable_cat_filter'])) {
-            $selected_cats = !empty($settings['categories']) ? (array)$settings['categories'] : [];
-            if (!empty($selected_cats)) {
-                foreach($selected_cats as $slug) {
-                    $term = get_term_by('slug', $slug, 'category');
-                    if ($term) $all_categories[$slug] = $term->name;
-                }
-            } else {
-                // If no specific cats selected, fetch all that have posts
-                $terms = get_terms(['taxonomy' => 'category', 'hide_empty' => true]);
-                foreach($terms as $t) $all_categories[$t->slug] = $t->name;
-            }
-        }
-
-        if (!empty($settings['enable_tag_filter'])) {
-            $selected_tags_input = !empty($settings['tags']) ? $settings['tags'] : '';
-            if (!empty($selected_tags_input)) {
-                $selected_tags = array_map('trim', explode(',', $selected_tags_input));
-                foreach($selected_tags as $slug) {
-                    $term = get_term_by('slug', $slug, 'post_tag');
-                    if ($term) $all_tags[$slug] = $term->name;
-                }
-            } else {
-                $terms = get_terms(['taxonomy' => 'post_tag', 'hide_empty' => true, 'number' => 50]);
-                foreach($terms as $t) $all_tags[$t->slug] = $t->name;
-            }
-        }
 
         if ($query->have_posts()) {
             while ($query->have_posts()) {
                 $query->the_post();
                 $post_id = get_the_ID();
-                $cats = get_the_category($post_id);
-                $tags = get_the_tags($post_id);
+                
+                // Collect row info for JS filtering (even with lazy load, we might need these)
+                $post_tax_data = [];
+                $post_taxonomies = get_post_taxonomies($post_id);
+                foreach($post_taxonomies as $ptax) {
+                    $pterms = wp_get_post_terms($post_id, $ptax, ['fields' => 'slugs']);
+                    $post_tax_data[$ptax] = implode(',', $pterms);
+                }
 
                 $columns_html = '';
                 foreach ($settings['columns'] as $col) {
@@ -137,16 +150,12 @@ class FrontendController {
                 }
 
                 $row_data[] = [
-                    'post_cats' => implode(',', array_keys(array_flip(wp_list_pluck($cats, 'slug')))),
-                    'post_tags' => $tags ? implode(',', array_keys(array_flip(wp_list_pluck($tags, 'slug')))) : '',
+                    'tax_data' => $post_tax_data,
                     'html' => $columns_html
                 ];
             }
             wp_reset_postdata();
         }
-
-        asort($all_categories);
-        asort($all_tags);
 
         ob_start();
         ?>
@@ -156,23 +165,14 @@ class FrontendController {
              data-per_page="<?php echo esc_attr($settings['items_per_page']); ?>">
             <div class="meowtable-header">
                 <div class="meowtable-filters">
-                    <?php if (!empty($settings['enable_cat_filter']) && !empty($all_categories)): ?>
-                        <select class="meowtable-filter-select meowtable-filter-cat">
-                            <option value="">All Categories</option>
-                            <?php foreach($all_categories as $slug => $name): ?>
+                    <?php foreach($active_filters as $tax_slug => $f_data): ?>
+                        <select class="meowtable-filter-select" data-taxonomy="<?php echo esc_attr($tax_slug); ?>">
+                            <option value="">All <?php echo esc_html($f_data['label']); ?></option>
+                            <?php foreach($f_data['terms'] as $slug => $name): ?>
                                 <option value="<?php echo esc_attr($slug); ?>"><?php echo esc_html($name); ?></option>
                             <?php endforeach; ?>
                         </select>
-                    <?php endif; ?>
-
-                    <?php if (!empty($settings['enable_tag_filter']) && !empty($all_tags)): ?>
-                        <select class="meowtable-filter-select meowtable-filter-tag">
-                            <option value="">All Tags</option>
-                            <?php foreach($all_tags as $slug => $name): ?>
-                                <option value="<?php echo esc_attr($slug); ?>"><?php echo esc_html($name); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    <?php endif; ?>
+                    <?php endforeach; ?>
                 </div>
 
                 <?php if (!empty($settings['enable_search'])): ?>
@@ -225,8 +225,7 @@ class FrontendController {
         $table_id = intval($_POST['table_id']);
         $page = intval($_POST['paged']);
         $search = sanitize_text_field($_POST['search']);
-        $cat_filter = sanitize_text_field($_POST['cat']);
-        $tag_filter = sanitize_text_field($_POST['tag']);
+        $frontend_tax_filters = isset($_POST['taxonomies']) ? (array)$_POST['taxonomies'] : [];
 
         global $wpdb;
         $table_name = $wpdb->prefix . 'meowtables';
@@ -247,26 +246,29 @@ class FrontendController {
         ];
 
         $tax_query = [];
-        // Apply Query Filters (categories/tags set in table config)
-        if (!empty($settings['categories'])) {
-            $cats = $settings['categories'];
-            if (!is_array($cats)) $cats = array_map('trim', explode(',', $cats));
-            $tax_query[] = ['taxonomy' => 'category', 'field' => 'slug', 'terms' => $cats];
-        }
-        if (!empty($settings['tags'])) {
-            $tag_input = !empty($settings['tags']) ? $settings['tags'] : '';
-            $tags = array_map('trim', explode(',', $tag_input));
-            if (!empty($tags[0])) {
-               $tax_query[] = ['taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $tags];
+        
+        // Base Query Filters from Admin Settings
+        if (!empty($settings['taxonomy_filters'])) {
+            foreach ($settings['taxonomy_filters'] as $tax_slug => $tax_cfg) {
+                if (!empty($tax_cfg['terms'])) {
+                    $tax_query[] = [
+                        'taxonomy' => $tax_slug,
+                        'field'    => 'slug',
+                        'terms'    => (array)$tax_cfg['terms'],
+                    ];
+                }
             }
         }
 
-        // Apply Frontend Dynamic Filters
-        if (!empty($cat_filter)) {
-            $tax_query[] = ['taxonomy' => 'category', 'field' => 'slug', 'terms' => $cat_filter];
-        }
-        if (!empty($tag_filter)) {
-            $tax_query[] = ['taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $tag_filter];
+        // Dynamic Filters from Frontend Selects
+        foreach ($frontend_tax_filters as $tax_slug => $selected_slug) {
+            if (!empty($selected_slug)) {
+                $tax_query[] = [
+                    'taxonomy' => $tax_slug,
+                    'field'    => 'slug',
+                    'terms'    => $selected_slug
+                ];
+            }
         }
 
         if (count($tax_query) > 1) {
@@ -285,13 +287,20 @@ class FrontendController {
             while ($query->have_posts()) {
                 $query->the_post();
                 $post_id = get_the_ID();
-                $cats = get_the_category($post_id);
-                $tags = get_the_tags($post_id);
                 
-                $post_cats = implode(',', array_keys(array_flip(wp_list_pluck($cats, 'slug'))));
-                $post_tags = $tags ? implode(',', array_keys(array_flip(wp_list_pluck($tags, 'slug')))) : '';
+                $post_tax_data = [];
+                $post_taxonomies = get_post_taxonomies($post_id);
+                foreach($post_taxonomies as $ptax) {
+                    $pterms = wp_get_post_terms($post_id, $ptax, ['fields' => 'slugs']);
+                    $post_tax_data['data-' . $ptax] = implode(',', $pterms);
+                }
 
-                $html .= '<tr data-categories="' . esc_attr($post_cats) . '" data-tags="' . esc_attr($post_tags) . '">';
+                $tax_attr = '';
+                foreach($post_tax_data as $attr => $val) {
+                    $tax_attr .= ' ' . esc_attr($attr) . '="' . esc_attr($val) . '"';
+                }
+
+                $html .= '<tr' . $tax_attr . '>';
                 foreach ($settings['columns'] as $col) {
                     $html .= '<td>' . self::get_post_field_value($col['key'], $col['type']) . '</td>';
                 }

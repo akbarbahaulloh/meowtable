@@ -16,16 +16,32 @@ $defaults = [
     'columns' => [],
     'data_source' => 'wp_posts',
     'post_types' => ['post'],
-    'categories' => '',
     'tags' => '',
     'items_per_page' => 10,
     'enable_lazy_load' => true,
     'enable_search' => true,
     'enable_cat_filter' => false,
-    'enable_tag_filter' => false
+    'enable_tag_filter' => false,
+    'taxonomy_filters' => []
 ];
 
 $settings = wp_parse_args($settings, $defaults);
+
+// Migrate legacy settings to new taxonomy structure
+if (empty($settings['taxonomy_filters'])) {
+    if (!empty($settings['categories'])) {
+        $settings['taxonomy_filters']['category'] = [
+            'terms' => (array)$settings['categories'],
+            'enable_frontend' => $settings['enable_cat_filter']
+        ];
+    }
+    if (!empty($settings['tags'])) {
+        $settings['taxonomy_filters']['post_tag'] = [
+            'terms' => array_map('trim', explode(',', $settings['tags'])),
+            'enable_frontend' => $settings['enable_tag_filter']
+        ];
+    }
+}
 
 // Fetch all registered post types
 $post_types = get_post_types(['public' => true], 'objects');
@@ -64,40 +80,46 @@ $post_types = get_post_types(['public' => true], 'objects');
                 </td>
             </tr>
             <tr>
-                <th scope="row"><label>Filter by Categories</label></th>
+                <th scope="row">Taxonomy Filters</th>
                 <td>
-                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: #fafafa; border-radius: 4px;">
+                    <div id="taxonomy-filters-wrapper">
                         <?php 
-                        $all_cats = get_categories(['hide_empty' => false]);
-                        $selected_cats = (array)$settings['categories'];
-                        // Handle comma string for backward compatibility
-                        if (!is_array($settings['categories']) && !empty($settings['categories'])) {
-                            $selected_cats = array_map('trim', explode(',', $settings['categories']));
-                        }
+                        $selected_pt = (array)$settings['post_types'];
+                        $taxonomies = get_object_taxonomies($selected_pt, 'objects');
                         
-                        foreach($all_cats as $cat): ?>
-                            <label style="display: block; margin-bottom: 5px;">
-                                <input type="checkbox" class="cat-checkbox" value="<?php echo esc_attr($cat->slug); ?>" <?php checked(in_array($cat->slug, $selected_cats), true); ?>>
-                                <?php echo esc_html($cat->name); ?>
-                            </label>
+                        foreach($taxonomies as $tax): 
+                            if (!$tax->public) continue;
+                            $tax_settings = isset($settings['taxonomy_filters'][$tax->name]) ? $settings['taxonomy_filters'][$tax->name] : ['terms' => [], 'enable_frontend' => false];
+                            $selected_terms = (array)$tax_settings['terms'];
+                        ?>
+                            <div class="tax-box" style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; background: #fff; border-radius: 4px;">
+                                <strong><?php echo esc_html($tax->label); ?> (<?php echo esc_html($tax->name); ?>)</strong>
+                                <div style="margin-top: 10px;">
+                                    <div style="max-height: 150px; overflow-y: auto; border: 1px solid #eee; padding: 10px; background: #fcfcfc;">
+                                        <?php 
+                                        $terms = get_terms(['taxonomy' => $tax->name, 'hide_empty' => false]);
+                                        foreach($terms as $term): ?>
+                                            <label style="display: block; margin-bottom: 3px;">
+                                                <input type="checkbox" class="tax-term-checkbox" data-taxonomy="<?php echo esc_attr($tax->name); ?>" value="<?php echo esc_attr($term->slug); ?>" <?php checked(in_array($term->slug, $selected_terms), true); ?>>
+                                                <?php echo esc_html($term->name); ?>
+                                            </label>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <p class="description">Limit table to these terms.</p>
+                                    <label style="display: block; margin-top: 8px; font-weight: 500;">
+                                        <input type="checkbox" class="tax-enable-frontend" data-taxonomy="<?php echo esc_attr($tax->name); ?>" <?php checked($tax_settings['enable_frontend'], true); ?>>
+                                        Enable Frontend Filter Dropdown
+                                    </label>
+                                </div>
+                            </div>
                         <?php endforeach; ?>
                     </div>
-                    <p class="description">Select categories to include in this table.</p>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row"><label for="tags">Filter by Tags (Slugs)</label></th>
-                <td>
-                    <input type="text" id="tags" class="regular-text" value="<?php echo esc_attr(is_array($settings['tags']) ? implode(',', $settings['tags']) : $settings['tags']); ?>">
-                    <p class="description">Comma-separated tag slugs.</p>
                 </td>
             </tr>
             <tr>
                 <th scope="row">Front-end Options</th>
                 <td>
                     <label><input type="checkbox" id="enable_search" <?php checked($settings['enable_search'], true); ?>> Enable Search Bar</label><br>
-                    <label><input type="checkbox" id="enable_cat_filter" <?php checked($settings['enable_cat_filter'], true); ?>> Enable Category Filter</label><br>
-                    <label><input type="checkbox" id="enable_tag_filter" <?php checked($settings['enable_tag_filter'], true); ?>> Enable Tag Filter</label><br>
                     <label><input type="checkbox" id="enable_lazy_load" <?php checked($settings['enable_lazy_load'], true); ?>> Enable AJAX Lazy Load (Recommended)</label>
                 </td>
             </tr>
@@ -179,21 +201,28 @@ $post_types = get_post_types(['public' => true], 'objects');
                 });
             });
 
-            var cats = [];
-            $('.cat-checkbox:checked').each(function() {
-                cats.push($(this).val());
+            var taxonomy_filters = {};
+            $('.tax-box').each(function() {
+                var tax = $(this).find('.tax-enable-frontend').data('taxonomy');
+                var terms = [];
+                $(this).find('.tax-term-checkbox:checked').each(function() {
+                    terms.push($(this).val());
+                });
+                var enable_frontend = $(this).find('.tax-enable-frontend').is(':checked');
+                
+                taxonomy_filters[tax] = {
+                    terms: terms,
+                    enable_frontend: enable_frontend
+                };
             });
 
             var settings = {
                 data_source: 'wp_posts',
                 post_types: $('#post_types').val() || ['post'],
-                categories: cats,
-                tags: $('#tags').val(),
+                taxonomy_filters: taxonomy_filters,
                 items_per_page: $('#items_per_page').val(),
                 enable_lazy_load: $('#enable_lazy_load').is(':checked'),
                 enable_search: $('#enable_search').is(':checked'),
-                enable_cat_filter: $('#enable_cat_filter').is(':checked'),
-                enable_tag_filter: $('#enable_tag_filter').is(':checked'),
                 columns: columns
             };
 
