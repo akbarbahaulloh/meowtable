@@ -76,7 +76,8 @@ $post_types = get_post_types(['public' => true], 'objects');
 
         <h2>Columns Configuration</h2>
         <div style="background:#fff; padding:20px; border:1px solid #ccc;">
-            <p>Define which data maps to which column. Supported Data Keys for WP Posts: <code>post_title</code>, <code>post_date</code>, <code>post_author</code>, <code>post_content</code>, <code>post_excerpt</code>, <code>thumbnail</code>, <code>permalink</code>, <code>categories</code>, <code>tags</code>. Custom columns can support standard HTML, Buttons, Shortcodes by placing data inside them with placeholders like <code>{{post_title}}</code> or <code>{{categories}}</code>.</p>
+            <p>Define which data maps to which column. Supported Data Keys for WP Posts: <code>post_title</code>, <code>post_date</code>, <code>post_author</code>, <code>post_content</code>, <code>post_excerpt</code>, <code>thumbnail</code>, <code>permalink</code>, <code>categories</code>, <code>tags</code>, <code>view_button</code>.</p>
+            <p><strong>Pro Tip:</strong> Use the "HTML" type to mix content. Example: <code>&lt;a href="{{permalink}}" class="btn"&gt;View: {{post_title}}&lt;/a&gt;</code></p>
 
             <table id="columns-builder" class="widefat striped">
                 <thead>

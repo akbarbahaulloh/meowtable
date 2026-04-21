@@ -117,6 +117,7 @@ class FrontendController {
             $html = str_replace('{{post_excerpt}}', get_the_excerpt(), $html);
             $html = str_replace('{{thumbnail}}', get_the_post_thumbnail(null, 'thumbnail'), $html);
             $html = str_replace('{{permalink}}', get_permalink(), $html);
+            $html = str_replace('{{view_button}}', '<a href="'.get_permalink().'" class="btn">View Post</a>', $html);
             $html = str_replace('{{categories}}', get_the_category_list(', '), $html);
             $html = str_replace('{{tags}}', get_the_tag_list('', ', ', ''), $html);
             $html = str_replace('{{id}}', $post->ID, $html);
@@ -146,6 +147,9 @@ class FrontendController {
                 case 'permalink':
                     $val = '<a href="'.get_permalink().'">View</a>';
                     break;
+                case 'view_button':
+                    $val = '<a href="'.get_permalink().'" class="btn">View Post</a>';
+                    break;
                 case 'categories':
                     $val = get_the_category_list(', ');
                     break;
@@ -159,8 +163,8 @@ class FrontendController {
                     break;
             }
             $val = esc_html($val); 
-            // If it's thumbnail, permalink, categories, or tags we actually want the HTML, so we unescape those specific ones
-            if (in_array($key, ['thumbnail', 'permalink', 'categories', 'tags'])) {
+            // If it's thumbnail, permalink, categories, tags, or view_button we actually want the HTML, so we unescape those specific ones
+            if (in_array($key, ['thumbnail', 'permalink', 'categories', 'tags', 'view_button'])) {
                 $val = html_entity_decode($val);
             }
         }
