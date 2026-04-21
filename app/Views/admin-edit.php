@@ -12,19 +12,18 @@ if (!$meowtable) {
 }
 
 $settings = json_decode($meowtable->settings, true);
-if (!$settings) {
-    $settings = [
-        'columns' => [],
-        'data_source' => 'wp_posts',
-        'post_types' => ['post'],
-        'categories' => '',
-        'categories' => '',
-        'tags' => '',
-        'enable_search' => true,
-        'enable_cat_filter' => false,
-        'enable_tag_filter' => false
-    ];
-}
+$defaults = [
+    'columns' => [],
+    'data_source' => 'wp_posts',
+    'post_types' => ['post'],
+    'categories' => '',
+    'tags' => '',
+    'enable_search' => true,
+    'enable_cat_filter' => false,
+    'enable_tag_filter' => false
+];
+
+$settings = wp_parse_args($settings, $defaults);
 
 // Fetch all registered post types
 $post_types = get_post_types(['public' => true], 'objects');

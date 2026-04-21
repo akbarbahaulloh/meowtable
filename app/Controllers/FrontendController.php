@@ -30,7 +30,19 @@ class FrontendController {
         }
 
         $settings = json_decode($table->settings, true);
-        if (!$settings || empty($settings['columns'])) {
+        $defaults = [
+            'columns' => [],
+            'data_source' => 'wp_posts',
+            'post_types' => ['post'],
+            'categories' => '',
+            'tags' => '',
+            'enable_search' => true,
+            'enable_cat_filter' => false,
+            'enable_tag_filter' => false
+        ];
+        $settings = wp_parse_args($settings, $defaults);
+
+        if (empty($settings['columns'])) {
             return '<p>Meowtable: Table is not configured yet.</p>';
         }
 
