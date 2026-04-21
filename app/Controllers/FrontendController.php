@@ -56,7 +56,10 @@ class FrontendController {
         // Tax Queries (Categories and Tags)
         $tax_query = [];
         if (!empty($settings['categories'])) {
-            $cats = array_map('trim', explode(',', $settings['categories']));
+            $cats = $settings['categories'];
+            if (!is_array($cats)) {
+                $cats = array_map('trim', explode(',', $cats));
+            }
             $tax_query[] = [
                 'taxonomy' => 'category',
                 'field'    => 'slug',

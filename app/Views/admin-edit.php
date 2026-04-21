@@ -62,10 +62,25 @@ $post_types = get_post_types(['public' => true], 'objects');
                 </td>
             </tr>
             <tr>
-                <th scope="row"><label for="categories">Filter by Categories (Slugs)</label></th>
+                <th scope="row"><label>Filter by Categories</label></th>
                 <td>
-                    <input type="text" id="categories" class="regular-text" value="<?php echo esc_attr(is_array($settings['categories']) ? implode(',', $settings['categories']) : $settings['categories']); ?>">
-                    <p class="description">Comma-separated category slugs.</p>
+                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: #fafafa; border-radius: 4px;">
+                        <?php 
+                        $all_cats = get_categories(['hide_empty' => false]);
+                        $selected_cats = (array)$settings['categories'];
+                        // Handle comma string for backward compatibility
+                        if (!is_array($settings['categories']) && !empty($settings['categories'])) {
+                            $selected_cats = array_map('trim', explode(',', $settings['categories']));
+                        }
+                        
+                        foreach($all_cats as $cat): ?>
+                            <label style="display: block; margin-bottom: 5px;">
+                                <input type="checkbox" class="cat-checkbox" value="<?php echo esc_attr($cat->slug); ?>" <?php checked(in_array($cat->slug, $selected_cats), true); ?>>
+                                <?php echo esc_html($cat->name); ?>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <p class="description">Select categories to include in this table.</p>
                 </td>
             </tr>
             <tr>
@@ -155,10 +170,15 @@ $post_types = get_post_types(['public' => true], 'objects');
                 });
             });
 
+            var cats = [];
+            $('.cat-checkbox:checked').each(function() {
+                cats.push($(this).val());
+            });
+
             var settings = {
                 data_source: 'wp_posts',
                 post_types: $('#post_types').val() || ['post'],
-                categories: $('#categories').val(),
+                categories: cats,
                 tags: $('#tags').val(),
                 enable_search: $('#enable_search').is(':checked'),
                 enable_cat_filter: $('#enable_cat_filter').is(':checked'),
