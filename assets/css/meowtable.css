@@ -165,16 +165,19 @@
 .meowtable-pagination-list, 
 .meowtable-pagination-list li {
     list-style: none !important;
+    list-style-type: none !important;
     padding: 0 !important;
     margin: 0 !important;
-    display: flex;
+    display: flex !important;
     gap: 5px;
     align-items: center;
     background: none !important;
+    background-image: none !important;
 }
 
 .meowtable-pagination-list li::before,
-.meowtable-pagination-list li::after {
+.meowtable-pagination-list li::after,
+.meowtable-pagination-list li::marker {
     content: none !important;
     display: none !important;
 }
