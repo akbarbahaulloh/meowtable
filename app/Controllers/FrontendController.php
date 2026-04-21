@@ -1,0 +1,156 @@
+<?php
+namespace Meowtable\Controllers;
+
+class FrontendController {
+
+    public static function init() {
+        add_shortcode('meowtable', [__CLASS__, 'render_shortcode']);
+        add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_frontend_assets']);
+    }
+
+    public static function enqueue_frontend_assets() {
+        wp_enqueue_style('meowtable-css', MEOWTABLE_PLUGIN_URL . 'assets/css/meowtable.css', [], MEOWTABLE_VERSION);
+    }
+
+    public static function render_shortcode($atts) {
+        $atts = shortcode_atts(['id' => 0], $atts, 'meowtable');
+        $id = intval($atts['id']);
+
+        if (!$id) {
+            return '<p>Meowtable: No ID specified.</p>';
+        }
+
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'meowtables';
+        $table = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $id));
+
+        if (!$table) {
+            return '<p>Meowtable: Table not found.</p>';
+        }
+
+        $settings = json_decode($table->settings, true);
+        if (!$settings || empty($settings['columns'])) {
+            return '<p>Meowtable: Table is not configured yet.</p>';
+        }
+
+        // Prepare Query
+        $args = [
+            'post_type' => !empty($settings['post_types']) ? $settings['post_types'] : 'post',
+            'posts_per_page' => -1,
+            'post_status' => 'publish'
+        ];
+
+        // Tax Queries (Categories and Tags)
+        $tax_query = [];
+        if (!empty($settings['categories'])) {
+            $cats = array_map('trim', explode(',', $settings['categories']));
+            $tax_query[] = [
+                'taxonomy' => 'category',
+                'field'    => 'slug',
+                'terms'    => $cats,
+            ];
+        }
+        if (!empty($settings['tags'])) {
+            $tags = array_map('trim', explode(',', $settings['tags']));
+            $tax_query[] = [
+                'taxonomy' => 'post_tag',
+                'field'    => 'slug',
+                'terms'    => $tags,
+            ];
+        }
+        if (!empty($tax_query)) {
+            $tax_query['relation'] = 'AND';
+            $args['tax_query'] = $tax_query;
+        }
+
+        $query = new \WP_Query($args);
+
+        ob_start();
+        ?>
+        <div class="meowtable-container meowtable-id-<?php echo esc_attr($id); ?>">
+            <table class="meowtable">
+                <thead>
+                    <tr>
+                        <?php foreach($settings['columns'] as $col): ?>
+                            <th><?php echo esc_html($col['label']); ?></th>
+                        <?php endforeach; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if ($query->have_posts()): while ($query->have_posts()): $query->the_post(); ?>
+                        <tr>
+                            <?php foreach($settings['columns'] as $col): 
+                                $val = self::get_post_field_value($col['key'], $col['type']);
+                            ?>
+                                <td><?php echo $val; ?></td>
+                            <?php endforeach; ?>
+                        </tr>
+                    <?php endwhile; wp_reset_postdata(); else: ?>
+                        <tr>
+                            <td colspan="<?php echo count($settings['columns']); ?>">No matching data found.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    private static function get_post_field_value($key, $type) {
+        $post = get_post();
+        $val = '';
+
+        if ($type === 'html') {
+            // Replace placeholders inside the HTML string with actual post data
+            $html = $key;
+            $html = str_replace('{{post_title}}', get_the_title(), $html);
+            $html = str_replace('{{post_date}}', get_the_date(), $html);
+            $html = str_replace('{{post_author}}', get_the_author(), $html);
+            $html = str_replace('{{post_content}}', get_the_content(), $html);
+            $html = str_replace('{{post_excerpt}}', get_the_excerpt(), $html);
+            $html = str_replace('{{thumbnail}}', get_the_post_thumbnail(null, 'thumbnail'), $html);
+            $html = str_replace('{{permalink}}', get_permalink(), $html);
+            $html = str_replace('{{id}}', $post->ID, $html);
+            
+            $val = do_shortcode($html);
+        } else {
+            // standard post data
+            switch ($key) {
+                case 'post_title':
+                    $val = get_the_title();
+                    break;
+                case 'post_date':
+                    $val = get_the_date();
+                    break;
+                case 'post_author':
+                    $val = get_the_author();
+                    break;
+                case 'post_content':
+                    $val = get_the_content();
+                    break;
+                case 'post_excerpt':
+                    $val = get_the_excerpt();
+                    break;
+                case 'thumbnail':
+                    $val = get_the_post_thumbnail(null, 'thumbnail');
+                    break;
+                case 'permalink':
+                    $val = '<a href="'.get_permalink().'">View</a>';
+                    break;
+                default:
+                    // Maybe it's a meta key
+                    $meta = get_post_meta($post->ID, $key, true);
+                    $val = is_scalar($meta) ? $meta : '';
+                    break;
+            }
+            $val = esc_html($val); 
+            // If it's thumbnail or permalink we actually want the HTML, so we unescape those specific ones
+            if (in_array($key, ['thumbnail', 'permalink'])) {
+                $val = html_entity_decode($val);
+            }
+        }
+
+        return $val;
+    }
+}

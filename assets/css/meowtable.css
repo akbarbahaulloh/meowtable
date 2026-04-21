@@ -1,0 +1,91 @@
+/* Meowtable Base Styles */
+.meowtable-container {
+    width: 100%;
+    overflow-x: auto;
+    margin: 20px 0;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    background: #fff;
+}
+
+.meowtable {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #333;
+}
+
+.meowtable thead {
+    background: linear-gradient(135deg, #6C63FF 0%, #483DF6 100%);
+    color: #ffffff;
+}
+
+.meowtable th {
+    padding: 16px;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: left;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+}
+
+.meowtable th:first-child {
+    border-top-left-radius: 8px;
+}
+
+.meowtable th:last-child {
+    border-top-right-radius: 8px;
+}
+
+.meowtable td {
+    padding: 16px;
+    font-size: 15px;
+    border-bottom: 1px solid #f1f2f6;
+    vertical-align: middle;
+}
+
+.meowtable tbody tr {
+    transition: all 0.2s ease-in-out;
+}
+
+.meowtable tbody tr:hover {
+    background-color: #f8f9ff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(108, 99, 255, 0.05);
+}
+
+.meowtable a {
+    color: #6C63FF;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.meowtable a:hover {
+    text-decoration: underline;
+}
+
+/* Interactive elements support */
+.meowtable img {
+    max-width: 100px;
+    height: auto;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.meowtable button, .meowtable .btn {
+    background: #6C63FF;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.meowtable button:hover, .meowtable .btn:hover {
+    background: #483DF6;
+    color: #fff;
+    text-decoration: none;
+}
