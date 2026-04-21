@@ -95,30 +95,41 @@ class FrontendController {
         $all_tags = [];
         $row_data = [];
 
+        // Correctly populate Filter Dropdowns from Settings
+        if (!empty($settings['enable_cat_filter'])) {
+            $selected_cats = !empty($settings['categories']) ? (array)$settings['categories'] : [];
+            if (!empty($selected_cats)) {
+                foreach($selected_cats as $slug) {
+                    $term = get_term_by('slug', $slug, 'category');
+                    if ($term) $all_categories[$slug] = $term->name;
+                }
+            } else {
+                // If no specific cats selected, fetch all that have posts
+                $terms = get_terms(['taxonomy' => 'category', 'hide_empty' => true]);
+                foreach($terms as $t) $all_categories[$t->slug] = $t->name;
+            }
+        }
+
+        if (!empty($settings['enable_tag_filter'])) {
+            $selected_tags_input = !empty($settings['tags']) ? $settings['tags'] : '';
+            if (!empty($selected_tags_input)) {
+                $selected_tags = array_map('trim', explode(',', $selected_tags_input));
+                foreach($selected_tags as $slug) {
+                    $term = get_term_by('slug', $slug, 'post_tag');
+                    if ($term) $all_tags[$slug] = $term->name;
+                }
+            } else {
+                $terms = get_terms(['taxonomy' => 'post_tag', 'hide_empty' => true, 'number' => 50]);
+                foreach($terms as $t) $all_tags[$t->slug] = $t->name;
+            }
+        }
+
         if ($query->have_posts()) {
             while ($query->have_posts()) {
                 $query->the_post();
                 $post_id = get_the_ID();
-                
-                // Collect Categories
                 $cats = get_the_category($post_id);
-                $allowed_cats = !empty($settings['categories']) ? (array)$settings['categories'] : [];
-                foreach($cats as $cat) {
-                    if (empty($allowed_cats) || in_array($cat->slug, $allowed_cats)) {
-                        $all_categories[$cat->slug] = $cat->name;
-                    }
-                }
-
-                // Collect Tags
                 $tags = get_the_tags($post_id);
-                if ($tags) {
-                    $allowed_tags = !empty($settings['tags']) ? array_map('trim', explode(',', $settings['tags'])) : [];
-                    foreach($tags as $tag) {
-                        if (empty($allowed_tags) || in_array($tag->slug, $allowed_tags)) {
-                            $all_tags[$tag->slug] = $tag->name;
-                        }
-                    }
-                }
 
                 $columns_html = '';
                 foreach ($settings['columns'] as $col) {
@@ -126,7 +137,6 @@ class FrontendController {
                 }
 
                 $row_data[] = [
-                    'cats' => implode(',', array_keys($all_categories)), // Wait, this is wrong, I need specific post cats
                     'post_cats' => implode(',', array_keys(array_flip(wp_list_pluck($cats, 'slug')))),
                     'post_tags' => $tags ? implode(',', array_keys(array_flip(wp_list_pluck($tags, 'slug')))) : '',
                     'html' => $columns_html
@@ -194,6 +204,9 @@ class FrontendController {
             
             <?php if ($settings['enable_lazy_load']): ?>
                 <div class="meowtable-footer">
+                    <div class="meowtable-info">
+                        Showing <span class="meowtable-count-current"><?php echo count($row_data); ?></span> of <span class="meowtable-count-total"><?php echo esc_html($query->found_posts); ?></span> records.
+                    </div>
                     <div class="meowtable-pagination" data-total_pages="<?php echo esc_attr($query->max_num_pages); ?>">
                         <!-- Pagination will be rendered by JS -->
                     </div>
@@ -241,8 +254,11 @@ class FrontendController {
             $tax_query[] = ['taxonomy' => 'category', 'field' => 'slug', 'terms' => $cats];
         }
         if (!empty($settings['tags'])) {
-            $tags = array_map('trim', explode(',', $settings['tags']));
-            $tax_query[] = ['taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $tags];
+            $tag_input = !empty($settings['tags']) ? $settings['tags'] : '';
+            $tags = array_map('trim', explode(',', $tag_input));
+            if (!empty($tags[0])) {
+               $tax_query[] = ['taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $tags];
+            }
         }
 
         // Apply Frontend Dynamic Filters
@@ -262,8 +278,10 @@ class FrontendController {
 
         $query = new \WP_Query($args);
         $html = '';
+        $found_count = 0;
 
         if ($query->have_posts()) {
+            $found_count = $query->post_count;
             while ($query->have_posts()) {
                 $query->the_post();
                 $post_id = get_the_ID();
@@ -287,7 +305,9 @@ class FrontendController {
         wp_send_json_success([
             'html' => $html,
             'total_pages' => $query->max_num_pages,
-            'current_page' => $page
+            'total_records' => $query->found_posts,
+            'current_page' => $page,
+            'count' => $found_count
         ]);
     }
 
