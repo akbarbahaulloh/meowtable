@@ -2,10 +2,12 @@ jQuery(document).ready(function($) {
     var searchTimer;
 
     function renderPagination($container, totalPages, currentPage) {
+        totalPages = parseInt(totalPages);
+        currentPage = parseInt(currentPage);
         var $pager = $container.find('.meowtable-pagination');
         $pager.empty();
 
-        if (totalPages < 1) return;
+        if (isNaN(totalPages) || totalPages < 1) return;
 
         var html = '<ul class="meowtable-pagination-list">';
         
