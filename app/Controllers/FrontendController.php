@@ -111,6 +111,7 @@ class FrontendController {
                     }
 
                     if (!empty($all_terms)) {
+                        asort($all_terms, SORT_NATURAL | SORT_FLAG_CASE);
                         $tax_obj = get_taxonomy($tax_slug);
                         $active_filters[$tax_slug] = [
                             'label' => $tax_obj->label,
@@ -190,8 +191,13 @@ class FrontendController {
                     </tr>
                 </thead>
                 <tbody class="meowtable-body">
-                    <?php if (!empty($row_data)): foreach ($row_data as $row): ?>
-                        <tr data-categories="<?php echo esc_attr($row['post_cats']); ?>" data-tags="<?php echo esc_attr($row['post_tags']); ?>">
+                    <?php if (!empty($row_data)): foreach ($row_data as $row): 
+                        $attrs = '';
+                        foreach($row['tax_data'] as $tax => $slugs) {
+                            $attrs .= ' data-' . esc_attr($tax) . '="' . esc_attr($slugs) . '"';
+                        }
+                    ?>
+                        <tr <?php echo $attrs; ?>>
                             <?php echo $row['html']; ?>
                         </tr>
                     <?php endforeach; else: ?>
