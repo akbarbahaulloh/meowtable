@@ -211,7 +211,7 @@ class FrontendController {
             <?php if ($settings['enable_lazy_load']): ?>
                 <div class="meowtable-footer">
                     <div class="meowtable-info">
-                        Showing <span class="meowtable-count-current"><?php echo count($row_data); ?></span> of <span class="meowtable-count-total"><?php echo esc_html($query->found_posts); ?></span> records.
+                        Showing <span class="meowtable-count-current"><?php echo count($row_data); ?></span> of <span class="meowtable-count-total"><?php echo esc_html($query->found_posts); ?></span> records
                     </div>
                     <div class="meowtable-pagination" data-total_pages="<?php echo esc_attr($query->max_num_pages); ?>">
                         <!-- Pagination will be rendered by JS -->

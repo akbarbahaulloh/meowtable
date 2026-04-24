@@ -9,27 +9,27 @@ jQuery(document).ready(function($) {
 
         if (isNaN(totalPages) || totalPages < 1) return;
 
-        var html = '<ul class="meowtable-pagination-list">';
+        var html = '<div class="meowtable-pagination-list">';
         
         // Prev
-        html += '<li><button class="meowtable-page-btn" data-page="' + (currentPage - 1) + '" ' + (currentPage <= 1 ? 'disabled' : '') + '>&laquo;</button></li>';
+        html += '<button class="meowtable-page-btn" data-page="' + (currentPage - 1) + '" ' + (currentPage <= 1 ? 'disabled' : '') + '>&laquo;</button>';
 
         // Pages
         if (totalPages > 1) {
             for (var i = 1; i <= totalPages; i++) {
                 if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
-                    html += '<li><button class="meowtable-page-btn ' + (i === currentPage ? 'active' : '') + '" data-page="' + i + '">' + i + '</button></li>';
+                    html += '<button class="meowtable-page-btn ' + (i === currentPage ? 'active' : '') + '" data-page="' + i + '">' + i + '</button>';
                 } else if (i === currentPage - 3 || i === currentPage + 3) {
-                    html += '<li class="meowtable-pagination-dots">...</li>';
+                    html += '<span class="meowtable-pagination-dots">...</span>';
                 }
             }
         } else {
-            html += '<li><button class="meowtable-page-btn active" data-page="1">1</button></li>';
+            html += '<button class="meowtable-page-btn active" data-page="1">1</button>';
         }
 
         // Next
-        html += '<li><button class="meowtable-page-btn" data-page="' + (currentPage + 1) + '" ' + (currentPage >= totalPages ? 'disabled' : '') + '>&raquo;</button></li>';
-        html += '</ul>';
+        html += '<button class="meowtable-page-btn" data-page="' + (currentPage + 1) + '" ' + (currentPage >= totalPages ? 'disabled' : '') + '>&raquo;</button>';
+        html += '</div>';
 
         $pager.html(html);
     }

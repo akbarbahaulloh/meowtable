@@ -159,27 +159,22 @@
     background: #fcfcff;
     border-top: 1px solid #f1f2f6;
     display: flex;
-    justify-content: center;
-}
-
-.meowtable-pagination-list, 
-.meowtable-pagination-list li {
-    list-style: none !important;
-    list-style-type: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    display: flex !important;
-    gap: 5px;
+    justify-content: space-between;
     align-items: center;
-    background: none !important;
-    background-image: none !important;
+    flex-wrap: wrap;
+    gap: 15px;
 }
 
-.meowtable-pagination-list li::before,
-.meowtable-pagination-list li::after,
-.meowtable-pagination-list li::marker {
-    content: none !important;
-    display: none !important;
+.meowtable-info {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.meowtable-pagination-list {
+    display: flex !important;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
 }
 
 .meowtable-page-btn {
