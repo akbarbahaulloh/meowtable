@@ -238,3 +238,11 @@
     0% { transform: translate(-50%, -50%) rotate(0deg); }
     100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
+
+/* Header Color Variations */
+.meowtable-header-red thead { background: #e74c3c !important; color: #fff !important; }
+.meowtable-header-green thead { background: #27ae60 !important; color: #fff !important; }
+.meowtable-header-blue thead { background: #2980b9 !important; color: #fff !important; }
+.meowtable-header-black thead { background: #2c3e50 !important; color: #fff !important; }
+.meowtable-header-none thead { background: transparent !important; color: #333 !important; }
+.meowtable-header-none th { border-bottom: 1px solid #f1f2f6 !important; color: #333 !important; }

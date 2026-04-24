@@ -48,7 +48,8 @@ class FrontendController {
             'enable_search' => true,
             'enable_cat_filter' => false,
             'enable_tag_filter' => false,
-            'open_new_tab' => false
+            'open_new_tab' => false,
+            'header_color' => 'default'
         ];
         $settings = wp_parse_args($settings, $defaults);
 
@@ -161,7 +162,7 @@ class FrontendController {
 
         ob_start();
         ?>
-        <div class="meowtable-container meowtable-id-<?php echo esc_attr($id); ?>" 
+        <div class="meowtable-container meowtable-id-<?php echo esc_attr($id); ?> meowtable-header-<?php echo esc_attr($settings['header_color']); ?>" 
              data-table_id="<?php echo esc_attr($id); ?>" 
              data-lazy="<?php echo $settings['enable_lazy_load'] ? '1' : '0'; ?>"
              data-per_page="<?php echo esc_attr($settings['items_per_page']); ?>">

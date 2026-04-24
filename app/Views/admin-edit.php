@@ -134,7 +134,16 @@ $post_types = get_post_types(['public' => true], 'objects');
                 <td>
                     <label><input type="checkbox" id="enable_search" <?php checked($settings['enable_search'], true); ?>> Enable Search Bar</label><br>
                     <label><input type="checkbox" id="enable_lazy_load" <?php checked($settings['enable_lazy_load'], true); ?>> Enable AJAX Lazy Load (Recommended)</label><br>
-                    <label><input type="checkbox" id="open_new_tab" <?php checked(!empty($settings['open_new_tab']), true); ?>> Open Links in New Tab</label>
+                    <label><input type="checkbox" id="open_new_tab" <?php checked(!empty($settings['open_new_tab']), true); ?>> Open Links in New Tab</label><br>
+                    <label for="header_color" style="display:inline-block; margin-top:10px;">Header Color:</label>
+                    <select id="header_color">
+                        <option value="default" <?php selected(($settings['header_color'] ?? 'default'), 'default'); ?>>Default (Purple)</option>
+                        <option value="red" <?php selected(($settings['header_color'] ?? ''), 'red'); ?>>Red</option>
+                        <option value="green" <?php selected(($settings['header_color'] ?? ''), 'green'); ?>>Green</option>
+                        <option value="blue" <?php selected(($settings['header_color'] ?? ''), 'blue'); ?>>Blue</option>
+                        <option value="black" <?php selected(($settings['header_color'] ?? ''), 'black'); ?>>Black</option>
+                        <option value="none" <?php selected(($settings['header_color'] ?? ''), 'none'); ?>>No Color</option>
+                    </select>
                 </td>
             </tr>
             <tr>
@@ -256,6 +265,7 @@ $post_types = get_post_types(['public' => true], 'objects');
                 enable_lazy_load: $('#enable_lazy_load').is(':checked'),
                 enable_search: $('#enable_search').is(':checked'),
                 open_new_tab: $('#open_new_tab').is(':checked'),
+                header_color: $('#header_color').val(),
                 columns: columns
             };
 
