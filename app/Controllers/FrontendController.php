@@ -384,6 +384,9 @@ class FrontendController {
                 case 'id':
                     $val = $post->ID;
                     break;
+                case 'linked_title':
+                    $val = '<a href="' . get_permalink() . '">' . get_the_title() . '</a>';
+                    break;
                 default:
                     // Check if the key itself is a shortcode (e.g. [acf field="alamat"])
                     if (strpos($key, '[') !== false && strpos($key, ']') !== false) {
@@ -402,7 +405,7 @@ class FrontendController {
             }
 
             // Only escape if it's not a known HTML field and doesn't contain HTML tags
-            $is_html_field = in_array($key, ['thumbnail', 'permalink', 'categories', 'tags', 'view_button']);
+            $is_html_field = in_array($key, ['thumbnail', 'permalink', 'categories', 'tags', 'view_button', 'linked_title']);
             $has_html = is_string($val) && (strpos($val, '<') !== false || strpos($val, '>') !== false);
 
             if (!$is_html_field && !$has_html) {
