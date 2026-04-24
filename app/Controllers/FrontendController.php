@@ -333,6 +333,7 @@ class FrontendController {
 
         $val = '';
 
+        if ($type === 'html') {
             $target = $open_new_tab ? ' target="_blank"' : '';
             
             $html = $key;
