@@ -328,6 +328,8 @@ class FrontendController {
 
     private static function get_post_field_value($key, $type) {
         $post = get_post();
+        if (!$post) return '';
+
         $val = '';
 
         if ($type === 'html') {
@@ -379,19 +381,35 @@ class FrontendController {
                 case 'tags':
                     $val = get_the_tag_list('', ', ', '');
                     break;
+                case 'id':
+                    $val = $post->ID;
+                    break;
                 default:
-                    // Maybe it's a meta key
-                    $meta = get_post_meta($post->ID, $key, true);
-                    $val = is_scalar($meta) ? $meta : '';
+                    // Check if the key itself is a shortcode (e.g. [acf field="alamat"])
+                    if (strpos($key, '[') !== false && strpos($key, ']') !== false) {
+                        $val = do_shortcode($key);
+                    } else {
+                        // Maybe it's a meta key
+                        $meta = get_post_meta($post->ID, $key, true);
+                        $val = is_scalar($meta) ? $meta : '';
+                        
+                        // Process shortcodes inside meta values
+                        if (is_string($val) && strpos($val, '[') !== false) {
+                            $val = do_shortcode($val);
+                        }
+                    }
                     break;
             }
-            $val = esc_html($val); 
-            // If it's thumbnail, permalink, categories, tags, or view_button we actually want the HTML, so we unescape those specific ones
-            if (in_array($key, ['thumbnail', 'permalink', 'categories', 'tags', 'view_button'])) {
-                $val = html_entity_decode($val);
+
+            // Only escape if it's not a known HTML field and doesn't contain HTML tags
+            $is_html_field = in_array($key, ['thumbnail', 'permalink', 'categories', 'tags', 'view_button']);
+            $has_html = is_string($val) && (strpos($val, '<') !== false || strpos($val, '>') !== false);
+
+            if (!$is_html_field && !$has_html) {
+                $val = esc_html($val);
             }
         }
 
-        return $val;
+        return apply_filters('meowtable_field_value', $val, $key, $post->ID);
     }
 }
