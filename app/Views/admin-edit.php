@@ -47,6 +47,19 @@ if (empty($settings['taxonomy_filters'])) {
 $post_types = get_post_types(['public' => true], 'objects');
 ?>
 
+<style>
+    #columns-builder tbody tr.ui-sortable-helper {
+        background: #fff;
+        display: table;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    #columns-builder tbody tr.ui-state-highlight {
+        background: #f9f9f9;
+        height: 50px;
+        border: 2px dashed #ddd;
+    }
+</style>
+
 <div class="wrap">
     <h1 class="wp-heading-inline">Edit Table: <?php echo esc_html($meowtable->title); ?></h1>
     <hr class="wp-header-end">
@@ -139,6 +152,7 @@ $post_types = get_post_types(['public' => true], 'objects');
             <table id="columns-builder" class="widefat striped">
                 <thead>
                     <tr>
+                        <th style="width:20px;"></th>
                         <th>Column Label</th>
                         <th>Data Key (Field)</th>
                         <th>Type (Text/HTML)</th>
@@ -149,6 +163,7 @@ $post_types = get_post_types(['public' => true], 'objects');
                     <?php if (!empty($settings['columns'])): ?>
                         <?php foreach($settings['columns'] as $col): ?>
                         <tr class="column-row">
+                            <td class="sort-handle" style="cursor:move; text-align:center; vertical-align:middle;"><span class="dashicons dashicons-menu"></span></td>
                             <td><input type="text" class="col-label" value="<?php echo esc_attr($col['label']); ?>"></td>
                             <td><input type="text" class="col-key" value="<?php echo esc_attr($col['key']); ?>"></td>
                             <td>
@@ -177,12 +192,28 @@ $post_types = get_post_types(['public' => true], 'objects');
     jQuery(document).ready(function($) {
         $('#add-column').on('click', function() {
             var html = '<tr class="column-row">';
+            html += '<td class="sort-handle" style="cursor:move; text-align:center; vertical-align:middle;"><span class="dashicons dashicons-menu"></span></td>';
             html += '<td><input type="text" class="col-label" value="New Column"></td>';
             html += '<td><input type="text" class="col-key" value="post_title"></td>';
             html += '<td><select class="col-type"><option value="text">Text/Shortcode</option><option value="html">HTML/Image/Button</option></select></td>';
             html += '<td><button type="button" class="button remove-col">Remove</button></td>';
             html += '</tr>';
             $('#columns-builder tbody').append(html);
+        });
+
+        // Initialize Sortable
+        $('#columns-builder tbody').sortable({
+            handle: '.sort-handle',
+            axis: 'y',
+            placeholder: 'ui-state-highlight',
+            helper: function(e, tr) {
+                var $originals = tr.children();
+                var $helper = tr.clone();
+                $helper.children().each(function(index) {
+                    $(this).width($originals.eq(index).width());
+                });
+                return $helper;
+            }
         });
 
         $(document).on('click', '.remove-col', function() {

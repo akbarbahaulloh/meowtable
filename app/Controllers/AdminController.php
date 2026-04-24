@@ -50,8 +50,8 @@ class AdminController {
         if (strpos($hook, 'meowtable') === false) {
             return;
         }
-        // wp_enqueue_style('meowtable-admin-css', MEOWTABLE_PLUGIN_URL . 'assets/css/admin.css', [], MEOWTABLE_VERSION);
-        // wp_enqueue_script('meowtable-admin-js', MEOWTABLE_PLUGIN_URL . 'assets/js/admin.js', ['jquery'], MEOWTABLE_VERSION, true);
+        
+        wp_enqueue_script('jquery-ui-sortable');
         
         wp_localize_script('jquery', 'meowtable_ajax', [
             'ajax_url' => admin_url('admin-ajax.php'),
