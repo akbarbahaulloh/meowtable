@@ -47,7 +47,8 @@ class FrontendController {
             'enable_lazy_load' => true,
             'enable_search' => true,
             'enable_cat_filter' => false,
-            'enable_tag_filter' => false
+            'enable_tag_filter' => false,
+            'open_new_tab' => false
         ];
         $settings = wp_parse_args($settings, $defaults);
 
@@ -147,7 +148,7 @@ class FrontendController {
 
                 $columns_html = '';
                 foreach ($settings['columns'] as $col) {
-                    $columns_html .= '<td>' . self::get_post_field_value($col['key'], $col['type']) . '</td>';
+                    $columns_html .= '<td>' . self::get_post_field_value($col['key'], $col['type'], !empty($settings['open_new_tab'])) . '</td>';
                 }
 
                 $row_data[] = [
@@ -308,7 +309,7 @@ class FrontendController {
 
                 $html .= '<tr' . $tax_attr . '>';
                 foreach ($settings['columns'] as $col) {
-                    $html .= '<td>' . self::get_post_field_value($col['key'], $col['type']) . '</td>';
+                    $html .= '<td>' . self::get_post_field_value($col['key'], $col['type'], !empty($settings['open_new_tab'])) . '</td>';
                 }
                 $html .= '</tr>';
             }
@@ -326,14 +327,14 @@ class FrontendController {
         ]);
     }
 
-    private static function get_post_field_value($key, $type) {
+    private static function get_post_field_value($key, $type, $open_new_tab = false) {
         $post = get_post();
         if (!$post) return '';
 
         $val = '';
 
-        if ($type === 'html') {
-            // Replace placeholders inside the HTML string with actual post data
+            $target = $open_new_tab ? ' target="_blank"' : '';
+            
             $html = $key;
             $html = str_replace('{{post_title}}', get_the_title(), $html);
             $html = str_replace('{{post_date}}', get_the_date(), $html);
@@ -342,7 +343,7 @@ class FrontendController {
             $html = str_replace('{{post_excerpt}}', get_the_excerpt(), $html);
             $html = str_replace('{{thumbnail}}', get_the_post_thumbnail(null, 'thumbnail'), $html);
             $html = str_replace('{{permalink}}', get_permalink(), $html);
-            $html = str_replace('{{view_button}}', '<a href="'.get_permalink().'" class="btn">View Post</a>', $html);
+            $html = str_replace('{{view_button}}', '<a href="'.get_permalink().'" class="btn"' . $target . '>View Post</a>', $html);
             $html = str_replace('{{categories}}', get_the_category_list(', '), $html);
             $html = str_replace('{{tags}}', get_the_tag_list('', ', ', ''), $html);
             $html = str_replace('{{id}}', $post->ID, $html);
@@ -370,10 +371,10 @@ class FrontendController {
                     $val = get_the_post_thumbnail(null, 'thumbnail');
                     break;
                 case 'permalink':
-                    $val = '<a href="'.get_permalink().'">View</a>';
+                    $val = '<a href="'.get_permalink().'"' . ($open_new_tab ? ' target="_blank"' : '') . '>View</a>';
                     break;
                 case 'view_button':
-                    $val = '<a href="'.get_permalink().'" class="btn">View Post</a>';
+                    $val = '<a href="'.get_permalink().'" class="btn"' . ($open_new_tab ? ' target="_blank"' : '') . '>View Post</a>';
                     break;
                 case 'categories':
                     $val = get_the_category_list(', ');
@@ -385,7 +386,7 @@ class FrontendController {
                     $val = $post->ID;
                     break;
                 case 'linked_title':
-                    $val = '<a href="' . get_permalink() . '">' . get_the_title() . '</a>';
+                    $val = '<a href="' . get_permalink() . '"' . ($open_new_tab ? ' target="_blank"' : '') . '>' . get_the_title() . '</a>';
                     break;
                 default:
                     // Check if the key itself is a shortcode (e.g. [acf field="alamat"])

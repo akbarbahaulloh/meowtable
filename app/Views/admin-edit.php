@@ -133,7 +133,8 @@ $post_types = get_post_types(['public' => true], 'objects');
                 <th scope="row">Front-end Options</th>
                 <td>
                     <label><input type="checkbox" id="enable_search" <?php checked($settings['enable_search'], true); ?>> Enable Search Bar</label><br>
-                    <label><input type="checkbox" id="enable_lazy_load" <?php checked($settings['enable_lazy_load'], true); ?>> Enable AJAX Lazy Load (Recommended)</label>
+                    <label><input type="checkbox" id="enable_lazy_load" <?php checked($settings['enable_lazy_load'], true); ?>> Enable AJAX Lazy Load (Recommended)</label><br>
+                    <label><input type="checkbox" id="open_new_tab" <?php checked(!empty($settings['open_new_tab']), true); ?>> Open Links in New Tab</label>
                 </td>
             </tr>
             <tr>
@@ -254,6 +255,7 @@ $post_types = get_post_types(['public' => true], 'objects');
                 items_per_page: $('#items_per_page').val(),
                 enable_lazy_load: $('#enable_lazy_load').is(':checked'),
                 enable_search: $('#enable_search').is(':checked'),
+                open_new_tab: $('#open_new_tab').is(':checked'),
                 columns: columns
             };
 
