@@ -166,6 +166,7 @@ $post_types = get_post_types(['public' => true], 'objects');
                         <th>Column Label</th>
                         <th>Data Key (Field)</th>
                         <th>Type (Text/HTML)</th>
+                        <th>Width (e.g. 200px or 25%)</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -182,6 +183,7 @@ $post_types = get_post_types(['public' => true], 'objects');
                                     <option value="html" <?php selected($col['type'], 'html'); ?>>HTML/Image/Button</option>
                                 </select>
                             </td>
+                            <td><input type="text" class="col-width" value="<?php echo esc_attr($col['width'] ?? ''); ?>" placeholder="Auto"></td>
                             <td><button type="button" class="button remove-col">Remove</button></td>
                         </tr>
                         <?php endforeach; ?>
@@ -206,6 +208,7 @@ $post_types = get_post_types(['public' => true], 'objects');
             html += '<td><input type="text" class="col-label" value="New Column"></td>';
             html += '<td><input type="text" class="col-key" value="post_title"></td>';
             html += '<td><select class="col-type"><option value="text">Text/Shortcode</option><option value="html">HTML/Image/Button</option></select></td>';
+            html += '<td><input type="text" class="col-width" value="" placeholder="Auto"></td>';
             html += '<td><button type="button" class="button remove-col">Remove</button></td>';
             html += '</tr>';
             $('#columns-builder tbody').append(html);
@@ -238,7 +241,8 @@ $post_types = get_post_types(['public' => true], 'objects');
                 columns.push({
                     label: $(this).find('.col-label').val(),
                     key: $(this).find('.col-key').val(),
-                    type: $(this).find('.col-type').val()
+                    type: $(this).find('.col-type').val(),
+                    width: $(this).find('.col-width').val()
                 });
             });
 

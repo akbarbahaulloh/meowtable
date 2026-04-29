@@ -109,6 +109,8 @@
     font-size: 15px;
     border-bottom: 1px solid #f1f2f6;
     vertical-align: middle;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .meowtable tbody tr {

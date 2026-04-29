@@ -196,8 +196,10 @@ class FrontendController {
             <table class="meowtable">
                 <thead>
                     <tr>
-                        <?php foreach($settings['columns'] as $col): ?>
-                            <th><?php echo esc_html($col['label']); ?></th>
+                        <?php foreach($settings['columns'] as $col): 
+                            $style = !empty($col['width']) ? ' style="width:' . esc_attr($col['width']) . ';"' : '';
+                        ?>
+                            <th<?php echo $style; ?>><?php echo esc_html($col['label']); ?></th>
                         <?php endforeach; ?>
                     </tr>
                 </thead>
