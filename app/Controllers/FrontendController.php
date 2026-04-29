@@ -176,6 +176,15 @@ class FrontendController {
                             <?php endforeach; ?>
                         </select>
                     <?php endforeach; ?>
+                    
+                    <?php if ($settings['enable_lazy_load']): ?>
+                    <select class="meowtable-per-page">
+                        <option value="10" <?php selected($settings['items_per_page'], 10); ?>>10 entries</option>
+                        <option value="25" <?php selected($settings['items_per_page'], 25); ?>>25 entries</option>
+                        <option value="50" <?php selected($settings['items_per_page'], 50); ?>>50 entries</option>
+                        <option value="100" <?php selected($settings['items_per_page'], 100); ?>>100 entries</option>
+                    </select>
+                    <?php endif; ?>
                 </div>
 
                 <?php if (!empty($settings['enable_search'])): ?>
@@ -245,9 +254,11 @@ class FrontendController {
 
         $settings = json_decode($table->settings, true);
         
+        $per_page = isset($_POST['per_page']) ? intval($_POST['per_page']) : intval($settings['items_per_page']);
+        
         $args = [
             'post_type' => !empty($settings['post_types']) ? $settings['post_types'] : 'post',
-            'posts_per_page' => intval($settings['items_per_page']),
+            'posts_per_page' => $per_page,
             'paged' => $page,
             'post_status' => 'publish',
             's' => $search

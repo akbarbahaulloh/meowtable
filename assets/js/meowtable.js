@@ -37,6 +37,7 @@ jQuery(document).ready(function($) {
     function fetchTableData($container, page) {
         var tableId = $container.data('table_id');
         var search = $container.find('.meowtable-search').val() || '';
+        var perPage = $container.find('.meowtable-per-page').val() || 10;
         
         // Collect Dynamic Taxonomy Filters
         var taxonomies = {};
@@ -55,6 +56,7 @@ jQuery(document).ready(function($) {
             table_id: tableId,
             paged: page,
             search: search,
+            per_page: perPage,
             taxonomies: taxonomies
         }, function(res) {
             $container.removeClass('meowtable-loading');
@@ -146,7 +148,7 @@ jQuery(document).ready(function($) {
     });
 
     // Dropdown Filter Events
-    $(document).on('change', '.meowtable-filter-select', function() {
+    $(document).on('change', '.meowtable-filter-select, .meowtable-per-page', function() {
         filterMeowtable($(this).closest('.meowtable-container'));
     });
 });
